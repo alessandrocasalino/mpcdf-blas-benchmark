@@ -239,53 +239,58 @@ double abs_diff<rocblas_double_complex>(const rocblas_double_complex& a, const r
 template <typename T>
 void benchmark()
 {
-    if constexpr (std::is_same<T, float>::value)
+
+    rocblas_operation transa, transb;
+
+    std::cout << " ============================== " << std::endl;
+    if constexpr (std::is_same<T, float>::value){
+        transa = rocblas_operation_none;
+        transb = rocblas_operation_none;
         std::cout << "Data type: float" << std::endl;
-    else if constexpr (std::is_same<T, double>::value)
+    }
+    else if constexpr (std::is_same<T, double>::value){
+        transa = rocblas_operation_none;
+        transb = rocblas_operation_none;
         std::cout << "Data type: double" << std::endl;
-    else if constexpr (std::is_same<T, rocblas_float_complex>::value)
+    }
+    else if constexpr (std::is_same<T, rocblas_float_complex>::value) {
+        transa = rocblas_operation_transpose;
+        transb = rocblas_operation_conjugate_transpose;
         std::cout << "Data type: rocblas_float_complex" << std::endl;
-    else if constexpr (std::is_same<T, rocblas_double_complex>::value)
+    }
+    else if constexpr (std::is_same<T, rocblas_double_complex>::value) {
+        transa = rocblas_operation_transpose;
+        transb = rocblas_operation_conjugate_transpose;
         std::cout << "Data type: rocblas_double_complex" << std::endl;
+    }
     else
         std::cerr << "Unsupported data type." << std::endl;
 
     // Construct GEMM
-    rocblas_operation transa = rocblas_operation_none, transb = rocblas_operation_transpose;
     const T alpha = get_alpha<T>(), beta = get_beta<T>();
 
     rocblas_int    m = DIM1, n = DIM2, k = DIM3;
     rocblas_int    lda, ldb, ldc;
     size_t         size_a, size_b, size_c;
-    rocblas_stride a_stride_1, a_stride_2, b_stride_1, b_stride_2;
-    std::cout << "user driven tuning example" << std::endl;
     if(transa == rocblas_operation_none)
     {
         lda        = m;
         size_a     = size_t(k) * lda;
-        a_stride_1 = 1;
-        a_stride_2 = lda;
     }
     else
     {
         lda        = k;
         size_a     = size_t(m) * lda;
-        a_stride_1 = lda;
-        a_stride_2 = 1;
     }
     if(transb == rocblas_operation_none)
     {
         ldb        = k;
         size_b     = size_t(n) * ldb;
-        b_stride_1 = 1;
-        b_stride_2 = ldb;
     }
     else
     {
         ldb        = n;
         size_b     = size_t(k) * ldb;
-        b_stride_1 = ldb;
-        b_stride_2 = 1;
     }
     ldc    = m;
     size_c = size_t(n) * ldc;
@@ -383,11 +388,7 @@ void benchmark()
                                                               &sizeType));
 
     std::cout << "Benchmarking..." << std::endl;
-    rocblas_int bestSolutionType = benchmark_solutions<T>(solutionsType, params);
 
-/*
-     * Get solutions that can solve only
-     */
 #define GEMM_EX_ARGS                                                                              \
     handle, transa, transb, m, n, k, &alpha, da, input_type, lda, db, input_type, ldb, &beta, dc, \
         output_type, ldc, dc, output_type, ldc, compute_type, rocblas_gemm_algo_solution_index
@@ -517,7 +518,7 @@ void benchmark()
 
 }
 
-int main(int argc, char* argv[])
+int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
 
     // Run benchmarks for different data types
