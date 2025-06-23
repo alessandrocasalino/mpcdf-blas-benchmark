@@ -16,16 +16,16 @@ set(SRC_FILES
 )
 
 # Add the executable
-add_executable(octopus_devel ${SRC_FILES})
+add_executable(blas_bench ${SRC_FILES})
 
 # Include the header directory
-target_include_directories(octopus_devel PRIVATE ${SRC_DIR})
+target_include_directories(blas_bench PRIVATE ${SRC_DIR})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(octopus_devel PRIVATE -g -O0)
+    target_compile_options(blas_bench PRIVATE -g -O0)
     message(STATUS "Building in Debug mode.")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(octopus_devel PRIVATE -O3)
+    target_compile_options(blas_bench PRIVATE -O3)
     message(STATUS "Building in Release mode.")
 endif()
 
@@ -36,10 +36,10 @@ if(HIP_FOUND)
     message(STATUS "HIP found. Building with ROCm support.")
     set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
     add_definitions(-D__HIP_PLATFORM_HCC__)
-    target_compile_options(octopus_devel PRIVATE -DHIP_ENABLED --offload-arch=gfx942)
+    target_compile_options(blas_bench PRIVATE -DHIP_ENABLED --offload-arch=gfx942)
 
     find_package(rocblas REQUIRED)
-    target_link_libraries(octopus_devel PRIVATE roc::rocblas hip::device)
+    target_link_libraries(blas_bench PRIVATE roc::rocblas hip::device)
 else()
     message(STATUS "HIP not found. Building with CUDA support.")
     find_package(CUDAToolkit REQUIRED)
@@ -51,15 +51,15 @@ else()
     set_source_files_properties(${SRC_FILES} PROPERTIES LANGUAGE CUDA)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        target_compile_options(octopus_devel PRIVATE
+        target_compile_options(blas_bench PRIVATE
             "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:-G --compiler-options -std=c++20>")
     else()
-        target_compile_options(octopus_devel PRIVATE
+        target_compile_options(blas_bench PRIVATE
             "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--compiler-options -std=c++20>")
     endif()
-    set_target_properties(octopus_devel PROPERTIES
+    set_target_properties(blas_bench PROPERTIES
              CUDA_SEPARABLE_COMPILATION ON)
 
-    target_link_libraries(octopus_devel PRIVATE cuda CUDA::cublas CUDA::cuda_driver)
-    set_property(TARGET octopus_devel PROPERTY CUDA_ARCHITECTURES "80")
+    target_link_libraries(blas_bench PRIVATE cuda CUDA::cublas CUDA::cuda_driver)
+    set_property(TARGET blas_bench PROPERTY CUDA_ARCHITECTURES "80")
 endif()

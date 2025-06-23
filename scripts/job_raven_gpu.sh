@@ -23,5 +23,5 @@ module load cuda/12.6
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
-srun ./build/octopus_devel
+srun ./build/blas_bench
 

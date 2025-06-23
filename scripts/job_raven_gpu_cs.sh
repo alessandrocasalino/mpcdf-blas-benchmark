@@ -23,5 +23,5 @@ module load cuda/12.6-nvhpcsdk_25
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
-compute-sanitizer ./build/octopus_devel
+compute-sanitizer ./build/blas_bench
 

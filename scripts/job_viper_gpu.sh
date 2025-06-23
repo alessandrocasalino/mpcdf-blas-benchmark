@@ -15,7 +15,7 @@
 #SBATCH --mail-type=NONE
 #SBATCH --mail-user=alessandro.casalino@mpcdf.mpg.de
 #SBATCH --time=0:05:00
-##SBATCH -p apudev
+#SBATCH -p apudev
 
 module purge
 module load rocm/6.4
@@ -23,5 +23,5 @@ module load rocm/6.4
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export LD_PRELOAD=/mpcdf/soft/RHEL_9/packages/x86_64/gcc/14.1.0/lib64/libstdc++.so.6
 
-srun ./build/octopus_devel
+srun ./build/blas_bench
 #srun rocprof-compute profile -n zprojector_bra_phase -k zprojector_bra_phase -- ../../install/bin/octopus

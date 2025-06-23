@@ -24,5 +24,5 @@ export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export LD_PRELOAD=/mpcdf/soft/RHEL_9/packages/x86_64/gcc/14.1.0/lib64/libstdc++.so.6
 
 #srun rocprof-compute profile -n zprojector_bra_phase -k zprojector_bra_phase -- ../../install/bin/octopus
-srun rocprofv3 --hip-trace --marker-trace --kernel-trace --memory-copy-trace --output-format pftrace -- ./build/octopus_devel
+srun rocprofv3 --hip-trace --marker-trace --kernel-trace --memory-copy-trace --output-format pftrace -- ./build/blas_bench
 
