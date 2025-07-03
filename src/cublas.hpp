@@ -128,11 +128,19 @@ bool find_best_cublaslt_gemm_algo(
     const int requestAlgoCount = 32;
     cublasLtMatmulHeuristicResult_t heuristicResults[requestAlgoCount];
     int returnedAlgoCount = 0;
+    
     cublasLtMatmulPreference_t preference;
     CHECK_CUBLASLT_ERROR(cublasLtMatmulPreferenceCreate(&preference));
+    size_t workspaceSize = 256 * 1024 * 1024; //256 mb
+    void* workspace;
+    cudaMalloc(&workspace, workspaceSize);
+    CHECK_CUBLASLT_ERROR(cublasLtMatmulPreferenceSetAttribute(
+        preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &workspaceSize, sizeof(workspaceSize)));
+    
     CHECK_CUBLASLT_ERROR(cublasLtMatmulAlgoGetHeuristic(
         ltHandle, operationDesc, Adesc, Bdesc, Cdesc, Cdesc, preference,
         requestAlgoCount, heuristicResults, &returnedAlgoCount));
+    
     cublasLtMatmulPreferenceDestroy(preference);
 
     float bestTime = 1e30f;
@@ -155,7 +163,7 @@ bool find_best_cublaslt_gemm_algo(
                 ltHandle, operationDesc,
                 &alpha, da, Adesc, db, Bdesc,
                 &beta, dc, Cdesc, dc, Cdesc,
-                &heuristicResults[i].algo, 0, 0, 0);
+                &heuristicResults[i].algo, workspace, workspaceSize, 0);
             cudaEventRecord(stop, 0);
             cudaEventSynchronize(stop);
             float ms = 0;
@@ -194,6 +202,8 @@ bool find_best_cublaslt_gemm_algo(
     CHECK_CUDA_ERROR(cudaFree(da));
     CHECK_CUDA_ERROR(cudaFree(db));
     CHECK_CUDA_ERROR(cudaFree(dc));
+
+    cudaFree(workspace);
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
