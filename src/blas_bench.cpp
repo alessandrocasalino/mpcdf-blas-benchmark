@@ -21,14 +21,9 @@
  * ************************************************************************ */
 
 #ifdef __HIP_PLATFORM_HCC__
-// need to enable unstable api
-#define ROCBLAS_NO_DEPRECATED_WARNINGS
-#define ROCBLAS_BETA_FEATURES_API
-
 #include "rocblas.hpp"
 #else
 #include "cublas.hpp"
-#include <cuComplex.h>
 #endif
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
@@ -36,8 +31,20 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
     // Run benchmarks for different data types
 #ifdef __HIP_PLATFORM_HCC__
-    benchmark<rocblas_float_complex>();
-    benchmark<rocblas_double_complex>();
+    // Possible rocblas operations:
+    // rocblas_operation_none, rocblas_operation_transpose, rocblas_operation_conjugate_transpose
+    benchmark<float>(12, 20, 23071, rocblas_operation_none, rocblas_operation_none);
+    benchmark<double>(12, 20, 23071, rocblas_operation_none, rocblas_operation_none);
+    benchmark<float>(12, 20, 23071, rocblas_operation_none, rocblas_operation_transpose);
+    benchmark<double>(12, 20, 23071, rocblas_operation_none, rocblas_operation_transpose);
+    benchmark<float>(12, 20, 23071, rocblas_operation_transpose, rocblas_operation_transpose);
+    benchmark<double>(12, 20, 23071, rocblas_operation_transpose, rocblas_operation_transpose);
+    benchmark<rocblas_float_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_none);
+    benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_none);
+    benchmark<rocblas_float_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_transpose);
+    benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_transpose);
+    benchmark<rocblas_float_complex>(12, 20, 23071, rocblas_operation_transpose, rocblas_operation_conjugate_transpose);
+    benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_transpose, rocblas_operation_conjugate_transpose);
 #else
     benchmark<float>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_N);
     benchmark<double>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_N);

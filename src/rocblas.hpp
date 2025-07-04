@@ -103,8 +103,8 @@ bool is_subset(std::vector<T> A, std::vector<T> B)
 template <typename T>
 rocblas_int benchmark_solutions(std::vector<rocblas_int> const& solutions,
                                 GEMMExParams<T> const&          gemmParams,
-                                rocblas_int                     cold_calls = 2,
-                                rocblas_int                     hot_calls  = 10)
+                                rocblas_int                     cold_calls = 5,
+                                rocblas_int                     hot_calls  = 50)
 {
 // Note: `cold_calls` and 'hot_calls' defaults match rocblas-bench
 //       Higher values give more consistent benchmarking results
@@ -233,36 +233,58 @@ double abs_diff<rocblas_double_complex>(const rocblas_double_complex& a, const r
 
 
 template <typename T>
-void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3 = 23071)
+void benchmark(const size_t dim1, const size_t dim2, const size_t dim3, const rocblas_operation transa, const rocblas_operation transb)
 {
 
     std::cout << " ============================== " << std::endl;
     std::cout << "Benchmarking GEMMEx with dimensions: " << dim1 << " x " << dim2 << " x " << dim3 << std::endl;
 
-    rocblas_operation transa, transb;
+    // Write the transpose operations
+    switch(transa) {
+        case rocblas_operation_none:
+            std::cout << "N x ";
+            break;
+        case rocblas_operation_transpose:
+            std::cout << "T x ";
+            break;
+        case rocblas_operation_conjugate_transpose:
+            std::cout << "C x ";
+            break;
+        default:
+            std::cerr << "Unsupported transpose operation for A." << std::endl;
+            return;
+    }
+    switch(transb) {
+        case rocblas_operation_none:
+            std::cout << "N" << std::endl;
+            break;
+        case rocblas_operation_transpose:
+            std::cout << "T" << std::endl;
+            break;
+        case rocblas_operation_conjugate_transpose:
+            std::cout << "C" << std::endl;
+            break;
+        default:
+            std::cerr << "Unsupported transpose operation for B." << std::endl;
+            return;
+    }
+    std::cout << std::endl;
 
     if constexpr (std::is_same<T, float>::value){
-        transa = rocblas_operation_none;
-        transb = rocblas_operation_none;
         std::cout << "Data type: float" << std::endl;
     }
     else if constexpr (std::is_same<T, double>::value){
-        transa = rocblas_operation_none;
-        transb = rocblas_operation_none;
         std::cout << "Data type: double" << std::endl;
     }
     else if constexpr (std::is_same<T, rocblas_float_complex>::value) {
-        transa = rocblas_operation_transpose;
-        transb = rocblas_operation_conjugate_transpose;
         std::cout << "Data type: rocblas_float_complex" << std::endl;
     }
     else if constexpr (std::is_same<T, rocblas_double_complex>::value) {
-        transa = rocblas_operation_transpose;
-        transb = rocblas_operation_conjugate_transpose;
         std::cout << "Data type: rocblas_double_complex" << std::endl;
     }
-    else
-        std::cerr << "Unsupported data type." << std::endl;
+    else {
+        static_assert(sizeof(T) == 0, "Unsupported data type");
+    }
 
     // Construct GEMM
     const T alpha = get_alpha<T>(), beta = get_beta<T>();
@@ -372,7 +394,7 @@ void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3
     rocblas_int sizeType;
     CHECK_ROCBLAS_ERROR(rocblas_gemm_ex_get_solutions_by_type(
         handle, input_type, output_type, compute_type, rocblas_gemm_flags_none, NULL, &sizeType));
-    std::cout << sizeType << " solution(s) found that match this GEMM's type." << std::endl;
+    //std::cout << sizeType << " solution(s) found that match this GEMM's type." << std::endl;
 
     // Fill array with list of solutions that match type
     // Note: some of these may be invalid
@@ -385,7 +407,7 @@ void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3
                                                               solutionsType.data(),
                                                               &sizeType));
 
-    std::cout << "Benchmarking..." << std::endl;
+    //std::cout << "Benchmarking..." << std::endl;
 
 #define GEMM_EX_ARGS                                                                              \
     handle, transa, transb, m, n, k, &alpha, da, input_type, lda, db, input_type, ldb, &beta, dc, \
@@ -397,7 +419,7 @@ void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3
     rocblas_int sizeSolve;
     CHECK_ROCBLAS_ERROR(
         rocblas_gemm_ex_get_solutions(GEMM_EX_ARGS, rocblas_gemm_flags_none, NULL, &sizeSolve));
-    std::cout << sizeSolve << " solution(s) found that can solve this GEMM." << std::endl;
+    //std::cout << sizeSolve << " solution(s) found that can solve this GEMM." << std::endl;
 
     // Fill array with list of solutions that match type
     // Note: some of these may be invalid
@@ -405,7 +427,7 @@ void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3
     CHECK_ROCBLAS_ERROR(rocblas_gemm_ex_get_solutions(
         GEMM_EX_ARGS, rocblas_gemm_flags_none, solutionsSolve.data(), &sizeSolve));
 
-    std::cout << "Benchmarking..." << std::endl;
+    //std::cout << "Benchmarking..." << std::endl;
     rocblas_int bestSolutionSolve = benchmark_solutions(solutionsSolve, params);
 
     // NOTE: bestSolutionType may be different to bestSolutionSolve, due to benchmarking noise
@@ -427,64 +449,110 @@ void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3
     CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, bestSolutionSolve, rocblas_gemm_flags_none));
     double exm_end = get_time_us_sync(stream);
     double exm_time = exm_end - exm_start;
-    std::cout << "[Timing] rocblas_gemm_ex winner: " << exm_time << " us" << std::endl;
+    std::cout << "rocblas_gemm_ex winner: " << exm_time << " us" << std::endl;
     // Copy result to host
     CHECK_HIP_ERROR(hipMemcpy(hc_exm.data(), dc, sizeof(T) * size_c, hipMemcpyDeviceToHost));
 
     // Solve using standard rocblas_sgemm
-    double sgemm_start = get_time_us_sync(stream);
-    if constexpr (std::is_same<T, float>::value)
+    constexpr int total_runs = 50;
+    constexpr int discard_runs = total_runs / 10; // Discard first 10%
+    std::vector<double> timings;
+
+    for(int run = 0; run < total_runs; ++run)
     {
-        CHECK_ROCBLAS_ERROR(rocblas_sgemm(handle, transa, transb, m, n, k,
-            reinterpret_cast<const float*>(&alpha),
-            reinterpret_cast<const float*>(da), lda,
-            reinterpret_cast<const float*>(db), ldb,
-            reinterpret_cast<const float*>(&beta),
-            reinterpret_cast<float*>(dc), ldc));
+        double sgemm_start = get_time_us_sync(stream);
+        if constexpr (std::is_same<T, float>::value)
+        {
+            CHECK_ROCBLAS_ERROR(rocblas_sgemm(handle, transa, transb, m, n, k,
+                reinterpret_cast<const float*>(&alpha),
+                reinterpret_cast<const float*>(da), lda,
+                reinterpret_cast<const float*>(db), ldb,
+                reinterpret_cast<const float*>(&beta),
+                reinterpret_cast<float*>(dc), ldc));
+        }
+        else if constexpr (std::is_same<T, double>::value)
+        {
+            CHECK_ROCBLAS_ERROR(rocblas_dgemm(handle, transa, transb, m, n, k,
+                reinterpret_cast<const double*>(&alpha),
+                reinterpret_cast<const double*>(da), lda,
+                reinterpret_cast<const double*>(db), ldb,
+                reinterpret_cast<const double*>(&beta),
+                reinterpret_cast<double*>(dc), ldc));
+        }
+        else if constexpr (std::is_same<T, rocblas_float_complex>::value)
+        {
+            CHECK_ROCBLAS_ERROR(rocblas_cgemm(handle, transa, transb, m, n, k,
+                reinterpret_cast<const rocblas_float_complex*>(&alpha),
+                reinterpret_cast<const rocblas_float_complex*>(da), lda,
+                reinterpret_cast<const rocblas_float_complex*>(db), ldb,
+                reinterpret_cast<const rocblas_float_complex*>(&beta),
+                reinterpret_cast<rocblas_float_complex*>(dc), ldc));
+        }
+        else if constexpr (std::is_same<T, rocblas_double_complex>::value)
+        {
+            CHECK_ROCBLAS_ERROR(rocblas_zgemm(handle, transa, transb, m, n, k,
+                reinterpret_cast<const rocblas_double_complex*>(&alpha),
+                reinterpret_cast<const rocblas_double_complex*>(da), lda,
+                reinterpret_cast<const rocblas_double_complex*>(db), ldb,
+                reinterpret_cast<const rocblas_double_complex*>(&beta),
+                reinterpret_cast<rocblas_double_complex*>(dc), ldc));
+        }
+        else
+        {
+            std::cerr << "Unsupported data type for sgemm." << std::endl;
+        }
+        double sgemm_end = get_time_us_sync(stream);
+        timings.push_back(sgemm_end - sgemm_start);
     }
-    else if constexpr (std::is_same<T, double>::value)
+
+    // Discard first 10%
+    std::sort(timings.begin(), timings.end());
+    auto begin = timings.begin() + discard_runs;
+    auto end = timings.end();
+    size_t count = std::distance(begin, end);
+
+    double mean = 0.0, stddev = 0.0;
+    if(count > 0)
     {
-        CHECK_ROCBLAS_ERROR(rocblas_dgemm(handle, transa, transb, m, n, k,
-            reinterpret_cast<const double*>(&alpha),
-            reinterpret_cast<const double*>(da), lda,
-            reinterpret_cast<const double*>(db), ldb,
-            reinterpret_cast<const double*>(&beta),
-            reinterpret_cast<double*>(dc), ldc));
+        mean = std::accumulate(begin, end, 0.0) / count;
+        for(auto it = begin; it != end; ++it)
+            stddev += (*it - mean) * (*it - mean);
+        stddev = std::sqrt(stddev / count);
     }
-    else if constexpr (std::is_same<T, rocblas_float_complex>::value)
-    {
-        CHECK_ROCBLAS_ERROR(rocblas_cgemm(handle, transa, transb, m, n, k,
-            reinterpret_cast<const rocblas_float_complex*>(&alpha),
-            reinterpret_cast<const rocblas_float_complex*>(da), lda,
-            reinterpret_cast<const rocblas_float_complex*>(db), ldb,
-            reinterpret_cast<const rocblas_float_complex*>(&beta),
-            reinterpret_cast<rocblas_float_complex*>(dc), ldc));
-    }
-    else if constexpr (std::is_same<T, rocblas_double_complex>::value)
-    {
-        CHECK_ROCBLAS_ERROR(rocblas_zgemm(handle, transa, transb, m, n, k,
-            reinterpret_cast<const rocblas_double_complex*>(&alpha),
-            reinterpret_cast<const rocblas_double_complex*>(da), lda,
-            reinterpret_cast<const rocblas_double_complex*>(db), ldb,
-            reinterpret_cast<const rocblas_double_complex*>(&beta),
-            reinterpret_cast<rocblas_double_complex*>(dc), ldc));
-    }
-    else
-    {
-        std::cerr << "Unsupported data type for sgemm." << std::endl;
-    }
-    double sgemm_end = get_time_us_sync(stream);
-    double sgemm_time = sgemm_end - sgemm_start;
-    std::cout << "[Timing] rocblas_gemm (no ex): " << sgemm_time << " us" << std::endl;
+
+    std::cout << "rocblas_gemm (no ex): mean = " << mean << " us, stddev = " << stddev << " us " << std::endl;
     // Copy result to host
     CHECK_HIP_ERROR(hipMemcpy(hc_sgemm.data(), dc, sizeof(T) * size_c, hipMemcpyDeviceToHost));
 
     // Solve using default solution
-    double dft_start = get_time_us_sync(stream);
-    CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, 0, rocblas_gemm_flags_none));
-    double dft_end = get_time_us_sync(stream);
-    double dft_time = dft_end - dft_start;
-    std::cout << "[Timing] rocblas_gemm_ex default: " << dft_time << " us" << std::endl;
+    constexpr int dft_total_runs = 50;
+    constexpr int dft_discard_runs = dft_total_runs / 10; // Discard first 10%
+    std::vector<double> dft_timings;
+
+    for(int run = 0; run < dft_total_runs; ++run)
+    {
+        double dft_start = get_time_us_sync(stream);
+        CHECK_ROCBLAS_ERROR(rocblas_gemm_exM(GEMM_EX_ARGS, 0, rocblas_gemm_flags_none));
+        double dft_end = get_time_us_sync(stream);
+        dft_timings.push_back(dft_end - dft_start);
+    }
+
+    std::sort(dft_timings.begin(), dft_timings.end());
+    auto dft_begin = dft_timings.begin() + dft_discard_runs;
+    auto dft_end = dft_timings.end();
+    size_t dft_count = std::distance(dft_begin, dft_end);
+
+    double dft_mean = 0.0, dft_stddev = 0.0;
+    if(dft_count > 0)
+    {
+        dft_mean = std::accumulate(dft_begin, dft_end, 0.0) / dft_count;
+        for(auto it = dft_begin; it != dft_end; ++it)
+            dft_stddev += (*it - dft_mean) * (*it - dft_mean);
+        dft_stddev = std::sqrt(dft_stddev / dft_count);
+    }
+
+    std::cout << "[Timing] rocblas_gemm_ex default: mean = " << dft_mean << " us, stddev = " << dft_stddev
+              << " us " << std::endl;
     // Copy result to host
     CHECK_HIP_ERROR(hipMemcpy(hc_dft.data(), dc, sizeof(T) * size_c, hipMemcpyDeviceToHost));
 
@@ -498,9 +566,7 @@ void benchmark(const size_t dim1 = 12, const size_t dim2 = 20, const size_t dim3
                 ++mismatches;
             }
         }
-        if(mismatches == 0)
-            std::cout << "[Check] " << name1 << " and " << name2 << " match within tolerance." << std::endl;
-        else
+        if(mismatches != 0)
             std::cout << "[Check] " << name1 << " and " << name2 << " differ at " << mismatches << " positions." << std::endl;
     };
 
