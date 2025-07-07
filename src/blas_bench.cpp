@@ -43,8 +43,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_none);
     benchmark<rocblas_float_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_transpose);
     benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_none, rocblas_operation_transpose);
-    benchmark<rocblas_float_complex>(12, 20, 23071, rocblas_operation_transpose, rocblas_operation_conjugate_transpose);
-    benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_transpose, rocblas_operation_conjugate_transpose);
+    benchmark<rocblas_float_complex>(12, 20, 23071, rocblas_operation_conjugate_transpose, rocblas_operation_transpose);
+
+    benchmark<rocblas_double_complex>(12, 20, 23071, rocblas_operation_conjugate_transpose, rocblas_operation_transpose);
+    benchmark<rocblas_double_complex>(12, 64, 23071, rocblas_operation_conjugate_transpose, rocblas_operation_transpose);
+    benchmark<rocblas_double_complex>(12, 20, 416, rocblas_operation_conjugate_transpose, rocblas_operation_transpose);
+    benchmark<rocblas_double_complex>(27, 64, 1573, rocblas_operation_conjugate_transpose, rocblas_operation_transpose);
 #else
     benchmark<float>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_N);
     benchmark<double>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_N);
@@ -56,8 +60,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     benchmark<cuDoubleComplex>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_N);
     benchmark<cuComplex>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_T);
     benchmark<cuDoubleComplex>(12, 20, 23071, CUBLAS_OP_N, CUBLAS_OP_T);
-    benchmark<cuComplex>(12, 20, 23071, CUBLAS_OP_T, CUBLAS_OP_C);
-    benchmark<cuDoubleComplex>(12, 20, 23071, CUBLAS_OP_T, CUBLAS_OP_C);
+    benchmark<cuComplex>(12, 20, 23071, CUBLAS_OP_C, CUBLAS_OP_T);
+
+    benchmark<cuDoubleComplex>(12, 20, 23071, CUBLAS_OP_C, CUBLAS_OP_T);
+    benchmark<cuDoubleComplex>(12, 64, 23071, CUBLAS_OP_C, CUBLAS_OP_T);
+    benchmark<cuDoubleComplex>(12, 20, 416, CUBLAS_OP_C, CUBLAS_OP_T);
+    benchmark<cuDoubleComplex>(27, 64, 1573, CUBLAS_OP_C, CUBLAS_OP_T);
 #endif
 
     return EXIT_SUCCESS;
